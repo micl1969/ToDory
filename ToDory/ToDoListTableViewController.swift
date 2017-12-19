@@ -11,9 +11,14 @@ import UIKit
 class ToDoListTableViewController: UITableViewController {
 
     var itemArray = ["egg","milk","soup"]
+    
+    let defaultData = UserDefaults.standard
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-  
+        if let items = defaultData.array(forKey: "ToDoListArray") as? [String]{
+            itemArray = items
+        }
     }
     //MARK: - TABLEVIEW DATASOURCE
 //    func numberOfSections(in tableView: UITableView) -> Int {
@@ -46,6 +51,7 @@ class ToDoListTableViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             if let text = itemTextField.text {
                 self.itemArray.append(text)
+                self.defaultData.set(self.itemArray, forKey: "ToDoListArray")
                 self.tableView.reloadData()
             }
         }
