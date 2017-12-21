@@ -7,13 +7,13 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryTableViewController: UITableViewController {
     
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    let realm = try! Realm()
     
-    var nameArray:[Category] = []
+    var nameResult:Results<Category>?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,12 +21,12 @@ class CategoryTableViewController: UITableViewController {
     }
     //MARK: TableView DataSource
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return nameArray.count
+        return nameResult?.count ?? 1
     }
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
         
-        cell.textLabel?.text = nameArray[indexPath.row].name
+        cell.textLabel?.text = nameResult?[indexPath.row].name ?? "No Category add yet!!"
         
         return cell
     }
@@ -40,7 +40,7 @@ class CategoryTableViewController: UITableViewController {
             
             let destinationVC = segue.destination as! ToDoListTableViewController
             if let indexPath = tableView.indexPathForSelectedRow{
-                destinationVC.selectedCategory = nameArray[indexPath.row]
+                destinationVC.selectedCategory = nameResult?[indexPath.row]
             }
             
         }
@@ -52,10 +52,9 @@ class CategoryTableViewController: UITableViewController {
         let alert = UIAlertController(title: "Add Memo Name", message: "Add TODO Name to the list", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add Name", style: .default) { (action) in
             if let text = itemTextField.text {
-                let newName = Category(context: self.context)
+                let newName = Category()
                 newName.name = text
-                self.nameArray.append(newName)
-                self.saveNameList()
+                self.save(category:newName)
                 self.tableView.reloadData()
             }
         }
@@ -68,19 +67,19 @@ class CategoryTableViewController: UITableViewController {
     }
     
     //MARK: - save and  load item list to file
-    func saveNameList(){
+    func save(category:Category){
         do{
-            try context.save()
+            try realm.write {
+                realm.add(category)
+            }
         }catch{
-            print("Error saveing context \(error)")
+            print("Error saveing Realm \(error)")
         }
     }
-    func loadNameList(with request: NSFetchRequest<Category> = Category.fetchRequest()){
-        do{
-            nameArray = try context.fetch(request)
-        }catch{
-            fatalError("Fetch core data error \(error)")
-        }
+    func loadNameList(){
+        
+        nameResult = realm.objects(Category.self)
+        
         tableView.reloadData()
     }
     
