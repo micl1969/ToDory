@@ -8,8 +8,9 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class ToDoListTableViewController: UITableViewController {
+class ToDoListTableViewController: SwipeCellTableViewController {
     
     @IBOutlet weak var searchBar: UISearchBar!
     
@@ -22,7 +23,6 @@ class ToDoListTableViewController: UITableViewController {
             loadItemList()
         }
     }
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -35,13 +35,21 @@ class ToDoListTableViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoListCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         if let item = itemResult?[indexPath.row]{
             cell.textLabel?.text = item.title
             cell.accessoryType = item.done ? .checkmark : .none
+            let percentage = CGFloat(indexPath.row)/CGFloat((itemResult?.count)!)
+            if let color = UIColor(hexString:selectedCategory!.hexColor)?.darken(byPercentage: percentage)
+            {
+                print(percentage,selectedCategory!.hexColor)
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+            }
         }else{
             cell.textLabel?.text = "No ToDo item add yet!!!"
         }
+        
         return cell
     }
     //MARK: - TABLEVIEW DELEGATE
@@ -51,8 +59,6 @@ class ToDoListTableViewController: UITableViewController {
                 try realm.write {
                     //swaping done check mark
                     item.done = !item.done
-                    //delete item selected
-                    ////realm.delete(item)
                 }
             }catch{
                 print("Realm item done change status error: \(error)")
@@ -87,23 +93,30 @@ class ToDoListTableViewController: UITableViewController {
     }
     
     //MARK: - save and  load item list to file
-    func saveItemList(){
-        do{
-            try context.save()
-        }catch{
-            print("Error saveing context \(error)")
-        }
-    }
     func loadItemList(){
-        itemResult = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
+        itemResult = selectedCategory?.items.sorted(byKeyPath: "dateOfCreate", ascending: false)
         tableView.reloadData()
+    }
+    //MARK: - SWIPE cell for Deletion
+    override func updateModels(at index: IndexPath) {
+        super.updateModels(at: index)
+        //delete item selected
+        if let itemForDeletion = itemResult?[index.row]{
+            do{
+                try realm.write {
+                    realm.delete(itemForDeletion)
+                }
+            }catch{
+                print("delet swipe item error: \(error)")
+            }
+        }
     }
 }
 
 //MARK: - SearchBAR extension
 extension ToDoListTableViewController: UISearchBarDelegate{
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        itemResult = itemResult?.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "dateOfCreate", ascending: true)
+        itemResult = itemResult?.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "dateOfCreate", ascending: false)
         tableView.reloadData()
     }
 //        let request:NSFetchRequest<Item> = Item.fetchRequest()

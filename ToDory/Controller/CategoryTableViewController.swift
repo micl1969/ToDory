@@ -8,8 +8,9 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class CategoryTableViewController: UITableViewController {
+class CategoryTableViewController: SwipeCellTableViewController {
     
     let realm = try! Realm()
     
@@ -18,16 +19,19 @@ class CategoryTableViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         loadNameList()
+        
     }
     //MARK: TableView DataSource
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return nameResult?.count ?? 1
     }
+
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        
-        cell.textLabel?.text = nameResult?[indexPath.row].name ?? "No Category add yet!!"
-        
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        cell.textLabel?.text = nameResult?[indexPath.row].name ?? "no Category"
+        let color = UIColor(hexString: nameResult?[indexPath.row].hexColor ?? "6666FF")!
+        cell.backgroundColor = color
+        cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
         return cell
     }
     //MARK: TableView Delegate
@@ -54,6 +58,7 @@ class CategoryTableViewController: UITableViewController {
             if let text = itemTextField.text {
                 let newName = Category()
                 newName.name = text
+                newName.hexColor = UIColor.randomFlat.hexValue()
                 self.save(category:newName)
                 self.tableView.reloadData()
             }
@@ -82,6 +87,19 @@ class CategoryTableViewController: UITableViewController {
         
         tableView.reloadData()
     }
-    
-
+    //MARK: - delete data from swipe
+    override func updateModels(at index: IndexPath) {
+        super.updateModels(at: index)
+        if let categoryForDeletion = nameResult?[index.row]{
+            do{
+                try realm.write {
+                    realm.delete(categoryForDeletion)
+                }
+            }catch{
+                print("delete category error \(error)")
+            }
+        }
+    }
 }
+
+
